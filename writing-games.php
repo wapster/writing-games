@@ -95,7 +95,7 @@ add_action('generate_rewrite_rules', 'add_rewrite_rules');
 // site.com/writing-games/
 function get_end_point () {
     global $wp;
-    $current_url = add_query_arg($wp->query_string, '', home_url($wp->request));
+    $current_url = get_current_url();
     $end_point = array_shift( explode( '?', array_pop( explode( '/', $current_url) ) ) );
     if ( ctype_digit( $end_point ) ) {
         return get_game_info( $end_point );
@@ -152,18 +152,59 @@ function get_all_info() {
     global $wpdb;
     $table_writing_games = TABLEWRITINGGAMES;
     $table_stat = TABLEGAMESTAT;
-    $info = $wpdb->get_results("SELECT * FROM $table_writing_games, $table_stat WHERE ($table_writing_games.id = $table_stat.game_id)", ARRAY_A);
+    $info = $wpdb->get_results( "SELECT * FROM $table_writing_games, $table_stat WHERE ( $table_writing_games.id = $table_stat.game_id ) ", ARRAY_A );
 	return $info;
 }
 
 // Проверяем наличие игры с id в БД
-function game_in_db( $id ) {
-
+function is_game_db( $id ) {
+    global $wpdb;
+    $table_writing_games = TABLEWRITINGGAMES;
+    $result = $wpdb->get_row( "SELECT `id` FROM $table_writing_games WHERE `id` = $id ", ARRAY_A );
+    $res = ( is_array( $result ) ) ? true : false;
+    return $res;
 }
 
+function get_current_url() {
+    global $wp;
+    $current_url = add_query_arg( $wp->query_string, '', home_url( $wp->request ) );
+    return $current_url;
+}
+
+// Получить id для страниц формата site.com/writing-games/12/score/
+function get_id_score( $url ) {
+	$i = explode( 'score', $url );
+	$i = explode( '/', $i[0] );
+	$i = array_diff( $i, array('') );
+	$id = array_pop( $i );
+    return $id;
+}
 
 // Вставляем в БД
-function insert_in_db() {
+// $data === array();
+function insert_in_stat_db( $data ) {
+    global $wpdb;
+    extract( $data ); // извлекаем из массива данные и помещаем в переменные
+    
+    $insert = $wpdb->insert(
+        TABLEGAMESTAT,
+        [
+            'game_id' => $game_id,
+            'game_type' => $game_type,
+            'user_name' => $user_name,
+            'score' => $score,
+            'score_desc' => $score_desc,
+        ],
+        ['%d', '%s', '%s', '%f', '%s']
+    );
+
+    if ( $insert ) {
+        $success = [ 'result' => 'success' ];
+        return json_encode( $success );
+    } else {
+        $fail = [ 'failure' => 'message' ];
+        return json_encode( $fail );
+    }
 
 }
 
