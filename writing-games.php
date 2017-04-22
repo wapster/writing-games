@@ -180,9 +180,9 @@ function get_id_score( $url ) {
     return $id;
 }
 
-// Вставляем в БД
+// Вставляем в таблицу СТАТИСТИКИ
 // $data === array();
-function insert_in_stat_db( $data ) {
+function insert_stat_table( $data ) {
     global $wpdb;
     extract( $data ); // извлекаем из массива данные и помещаем в переменные
 
@@ -207,6 +207,53 @@ function insert_in_stat_db( $data ) {
     }
 
 }
+
+
+// Обновляем в таблице ИГР (метод PUT)
+// $data === array();
+// $wpdb->update возвращает:
+// * число - сколько строк было обработано
+// * 0 - запрос был выполнен корректно, но ни одна строка не была обработана.
+// * false - запрос провалился или ошибка запроса.
+function update_game_table() {
+    parse_str(file_get_contents('php://input'), $data);
+
+    global $wpdb;
+
+    extract( $data ); // извлекаем из массива данные и помещаем в переменные
+
+    $update = $wpdb->update(
+        TABLEWRITINGGAMES,
+        [
+            'name' => $name,
+            'words' => $words,
+            'time' => $time,
+            'enabled' => $enabled,
+        ],
+
+        [ 'id' => $game_id ],
+
+        [ '%s', '%s', '%d', '%d' ],
+
+        [ '%d' ]
+    );
+    // return $update;
+
+    if ( $update > 0 ) {
+        $success = [ 'result' => 'success update game table' ];
+        return json_encode( $success );
+    } elseif ( $update === 0) {
+        $no_update = [ 'result' => 'no update game table' ];
+        return json_encode( $no_update );
+    } elseif ( $update === false ) {
+        $fail = [ 'failure' => 'error update game table' ];
+        return json_encode( $fail );
+    }
+
+
+}
+
+
 
 // Информация об игре по ее `id`
 function get_game_info( $id ) {
