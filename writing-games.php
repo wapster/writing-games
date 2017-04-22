@@ -14,8 +14,8 @@ define( 'WGPLUGINDIR', plugin_dir_url(__FILE__) );
 // Получаем префикс таблиц WP и устанавливаем названия своих таблиц
 global $wpdb;
 $prefix = $wpdb->prefix;
-define( 'TABLEWRITINGGAMES' , $prefix . 'writing_games');
-define( 'TABLEGAMESTAT' , $prefix . 'game_statistics');
+define( 'TABLEWRITINGGAMES', $prefix . 'writing_games');
+define( 'TABLEGAMESTAT', $prefix . 'game_statistics');
 
 // Функция для отладки
 function wg_debuger($arr) {
@@ -89,25 +89,25 @@ function add_rewrite_rules( $wp_rewrite ) {
 add_action('generate_rewrite_rules', 'add_rewrite_rules');
 
 
-// Получаем id игры из текущего URL ( site.com/writing-games/34/ )
-function get_game_id () {
+// Парсим текущий URL (маршрутизатор)
+// site.com/writing-games/34/
+// site.com/writing-games/34/score/
+// site.com/writing-games/
+function get_end_point () {
     global $wp;
     $current_url = add_query_arg($wp->query_string, '', home_url($wp->request));
-    // $current_url = $_SERVER['REQUEST_URI'];
     $end_point = array_shift( explode( '?', array_pop( explode( '/', $current_url) ) ) );
     if ( ctype_digit( $end_point ) ) {
-        return $end_point;
+        return get_game_info( $end_point );
     } elseif ( $end_point == 'score') {
-        // $end_point = explode( '/', array_shift( explode( 'score', array_pop( explode( '/', $current_url) ) ) ) );
         $i = explode( 'score', $current_url );
         $i = explode( '/', $i[0] );
         $i = array_diff( $i, array('') );
         $end_point = array_pop( $i );
-        return $end_point;
+        return get_game_score( $end_point );
+    } elseif ( $end_point == 'writing-games' ) {
+        return false;
     }
-
-    // $id = array_shift( explode( '?', array_pop( explode( '/', $current_url ) ) ) );
-    // return (ctype_digit($id)) ? $id : false;
 }
 
 
@@ -156,10 +156,29 @@ function get_all_info() {
 	return $info;
 }
 
+// Проверяем наличие игры с id в БД
+function game_in_db( $id ) {
+
+}
+
+
+// Вставляем в БД
+function insert_in_db() {
+
+}
+
 // Информация об игре по ее `id`
 function get_game_info( $id ) {
     global $wpdb;
     $table_writing_games = TABLEWRITINGGAMES;
     $info = $wpdb->get_row( "SELECT * FROM $table_writing_games WHERE `id` = $id", ARRAY_A );
+    return json_encode( $info );
+}
+
+// Получаем `score` для игры с `id`
+function get_game_score( $id ) {
+    global $wpdb;
+    $table_stat = TABLEGAMESTAT;
+    $info = $wpdb->get_row( "SELECT * FROM $table_stat WHERE `game_id` = $id ORDER BY `score` DESC", ARRAY_A );
     return json_encode( $info );
 }
