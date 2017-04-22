@@ -185,7 +185,7 @@ function get_id_score( $url ) {
 function insert_in_stat_db( $data ) {
     global $wpdb;
     extract( $data ); // извлекаем из массива данные и помещаем в переменные
-    
+
     $insert = $wpdb->insert(
         TABLEGAMESTAT,
         [
@@ -220,6 +220,6 @@ function get_game_info( $id ) {
 function get_game_score( $id ) {
     global $wpdb;
     $table_stat = TABLEGAMESTAT;
-    $info = $wpdb->get_row( "SELECT * FROM $table_stat WHERE `game_id` = $id ORDER BY `score` DESC", ARRAY_A );
+    $info = $wpdb->get_results( "SELECT * FROM $table_stat WHERE `game_id` = $id ORDER BY `score` DESC", ARRAY_A );
     return json_encode( $info );
 }
