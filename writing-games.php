@@ -27,28 +27,14 @@ function wg_debuger($arr) {
 // Регистрируем пользовательский тип поста  (CPT)
 add_action( 'init', 'create_writing_games_post_type' );
 function create_writing_games_post_type() {
-    $labels = array(
-	'name' => 'Почта Банк', // Основное название типа записи
-	'singular_name' => 'Почта Банк', // отдельное название записи типа Book
-	'add_new' => 'Добавить Почта Банк',
-	'add_new_item' => 'Добавить новый офис/банкомат Почта Банк',
-	'edit_item' => 'Редактировать офис/банкомат Почта Банк',
-	'new_item' => 'Новый Почта Банк',
-	'view_item' => 'Посмотреть Почта Банк',
-	'search_items' => 'Найти Почта Банк',
-	'not_found' =>  'Почта Банк не найден',
-	'not_found_in_trash' => 'Почта Банк в корзине не найден',
-	'parent_item_colon' => '',
-	'menu_name' => 'Все отделения и банкоматы Почта Банка'
-    );
 
     $args = array(
-    	'labels' => $labels,
-    	// 'labels' => '',
-    	'public' => true,
+    	// 'labels' => $labels,
+    	'labels' => '',
+    	'public' => false,
     	'publicly_queryable' => true,
-    	'show_ui' => true,
-    	'show_in_menu' => true,
+    	'show_ui' => false,
+    	'show_in_menu' => false,
     	'query_var' => true,
     	'rewrite' => true,
     	'capability_type' => 'post',
@@ -79,11 +65,6 @@ function add_rewrite_rules( $wp_rewrite ) {
         'writing-games/([0-9]{1,})/score/?$' => 'index.php?post_type=writing-games',
 	);
     $wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
-
-    // $rules = get_option( 'rewrite_rules' );
-    // if ( !isset($rules[$new_rules]) ) {
-    //     $wp_rewrite->flush_rules();
-    // }
     return $wp_rewrite->rules;
 }
 add_action('generate_rewrite_rules', 'add_rewrite_rules');
@@ -130,22 +111,171 @@ function wgwp_activation() {
 // Создаем страницу плагина
 add_action( 'admin_menu', 'wgwp_create_menu' );
 function wgwp_create_menu() {
-    add_menu_page('Плагин Writing Games', 'Writing Games', 'manage_options', 'wgwp-main-menu', 'wgwp_createmainmenu');
-    // add_submenu_page( 'wgwp-main-menu', 'Заголовок под-меню', 'Основное', 'manage_options', 'wgwp-main-menu');
-    // add_submenu_page( 'wgwp-main-menu', 'Заголовок = title', 'Настройки', 'manage_options', 'wgwp-settings', 'wgwp_settingsmenu');
+    add_menu_page('Плагин Writing Games', 'Writing Games', 'manage_options', 'wgwp-main-menu', 'writing_games_list_games');
+
+    $main_menu = add_submenu_page( 'wgwp-main-menu', 'Заголовок под-меню', 'Список игр', 'manage_options', 'wgwp-main-menu');
+    // подключаем CSS на странице плагина
+    add_action('admin_print_styles-'. $main_menu, 'writing_games_admin_css');
+
+    $add_game_page = add_submenu_page( 'wgwp-main-menu', 'Добавить игру', 'Добавить игру', 'manage_options', 'writing-games-add-game', 'writing_games_add_game');
+    // подключаем CSS на странице плагина
+    add_action('admin_print_styles-'. $add_game_page, 'writing_games_admin_css');
+
+    add_submenu_page(
+			  'wgwp-main-menu'   //or 'options.php'
+			, 'Произвольная страница подменю'
+			, 'Произвольная страница подменю'
+			, 'manage_options'
+			, 'my-custom-submenu-page'
+			, 'wgwp_createmainmenu'
+	);
+
+    add_action( 'wp_enqueue_scripts', 'my_scripts_method', 11 );
 }
 
+function my_scripts_method() {
+	wp_deregister_script( 'jquery' );
+	wp_register_script( 'jquery', 'http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js');
+	wp_enqueue_script( 'jquery' );
+}
+
+// Подключаем файл стилей для страниц плагина в админке сайта
+function writing_games_admin_css() {
+    wp_enqueue_style( 'writing-game-plugin-page-stylesheet', plugins_url('admin-style.css', __FILE__) );
+    wp_enqueue_style( 'writing-game-plugin-include-fontawesome', 'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' );
+}
 
 // Основная страница плагина
 function wgwp_createmainmenu() {
     echo "<div>основная страница</div>";
-    echo plugin_dir_url(__FILE__);
-    echo WGPLUGINDIR;
-    echo TABLEGAMESTAT;
+    wg_debuger( $_POST );
 }
 
 
+// Отображаем список игр
+function writing_games_list_games() {
+
+
+    // срабатывает при удалении игры
+    if ( !empty( $_POST['delete_game'] ) ) {
+        if ( delete_game() === false ) {
+            echo "<h1 class='error'>Ошибка при удалении</h1><hr>";
+        } else {
+            echo "<h1 class='ok'>Игра удалена</h1><hr>";
+        }
+    }
+
+    if ( !empty( $_POST['edit_game']) ) {
+        
+    }
+
+    // получаем список всех игр
+    $list_games = get_list_games(); // array
+?>
+<div class="content">
+<h1>Список игр</h1>
+<h2>Количество: <?php echo count($list_games); ?></h2>
+    <table class="list-games" cellspacing='0' cellpadding='20'>
+
+    <?php
+        foreach ($list_games as $key => $game) :
+            $game_id       =  $game['id'];
+            $game_name     =  $game['name'];
+            $game_words    =  $game['words'];
+            $game_time     =  $game['time'];
+            $game_enabled  =  $game['enabled'];
+    ?>
+        <tr>
+            <td><?php echo $game_name; ?></td>
+            <td><?php echo $game_words; ?></td>
+            <td><?php echo $game_time; ?></td>
+            <td><?php echo $game_enabled; ?></td>
+            <td align="right" width="100px">
+                <form action="" method="POST">
+                    <button type="submit" name="edit_game" value="<?php echo $game_id; ?>" title="Редактировать">
+                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                    </button>
+                    <span>&nbsp;&nbsp;&nbsp;</span>
+                    <button type="submit" name="delete_game" value="<?php echo $game_id; ?>" title="Удалить">
+                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>
+    <?php endforeach;?>
+    </table>
+</div>
+<?php } // end writing_games_list_games()
+
+
+// Добавляем игру
+function writing_games_add_game() {
+
+    if ( !empty($_POST['add_game']) ) {
+        if ( add_game() ) {
+            echo "<h3 class='ok'>Игра добавлена</h3><hr>";
+        } else {
+            echo "<h3 class='error'>Ошибка при добавлении игры</h3>";
+        }
+    }
+?>
+
+<h1>Добавить игру</h1>
+<div class="">
+    <form class="" action="" method="POST">
+        <p><input type="text" name="game_name" value="" placeholder="название" autofocus="on" required></p>
+        <p><textarea name="game_words" rows="8" cols="40" placeholder="текст" required></textarea></p>
+        <p>
+            <input type="number" name="game_time" value="" placeholder="время" required>
+            <span class=""><label><input type="checkbox" checked name="game_enabled">Вкл. ?</label></span>
+        </p>
+        <input type="submit" name="add_game" value="Добавить">
+    </form>
+</div>
+
+<?
+} // end of wgwp_add_game()
+
+
+
+
 // ФУНКЦИИ ДЛЯ РАБОТЫ С БД
+
+// добавляем игру в таблицу
+function add_game() {
+    global $wpdb;
+    $data = $_POST;
+    $game_name = $data['game_name'];
+    $game_words = $data['game_words'];
+    $game_time = $data['game_time'];
+    $game_enabled = ( $data['game_enabled'] == '' ) ? 0 : 1;
+    $insert_game = $wpdb->insert(
+        TABLEWRITINGGAMES,
+        [
+            'name'    => $game_name,
+            'words'   => $game_words,
+            'time'    => $game_time,
+            'enabled' => $game_enabled,
+        ],
+        [ '%s', '%s', '%d', '%d' ]
+    );
+
+    return $insert_game;
+}
+
+// удаление игры
+function delete_game() {
+    global $wpdb;
+    $game_id = $_POST['delete_game'];
+    $delete_game = $wpdb->delete(
+        TABLEWRITINGGAMES,
+        [ 'id' => $game_id ],
+        [ '%d' ]
+    );
+
+    return $delete_game;
+}
+
 
 // ВСЯ информация из двух таблиц
 function get_all_info() {
@@ -155,6 +285,15 @@ function get_all_info() {
     $info = $wpdb->get_results( "SELECT * FROM $table_writing_games, $table_stat WHERE ( $table_writing_games.id = $table_stat.game_id ) ", ARRAY_A );
 	return $info;
 }
+
+// информация об играх
+function get_list_games() {
+    global $wpdb;
+    $table_writing_games = TABLEWRITINGGAMES;
+    $list_games = $wpdb->get_results( "SELECT * FROM $table_writing_games", ARRAY_A );
+	return $list_games;
+}
+
 
 // Проверяем наличие игры с id в БД
 function is_game_db( $id ) {
@@ -252,7 +391,6 @@ function update_game_table() {
 
 
 }
-
 
 
 // Информация об игре по ее `id`
