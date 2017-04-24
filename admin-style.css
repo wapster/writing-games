@@ -1,0 +1,35 @@
+/**
+*
+*
+    Для страницы плагина
+*
+*
+*/
+
+.content {
+    margin-top: 1%;
+}
+
+.color-background {
+    background-color: #ccc;
+}
+
+.ok {
+    color: green;
+}
+
+.error {
+    color: red;
+}
+
+.list-games {
+    padding-right: 0%;
+    width: 97%;
+    font-size: 1.2em;
+}
+
+
+.list-games tr:hover {
+    background-color: #E6E9EB;
+    border-radius: 10px;
+}
