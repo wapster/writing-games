@@ -121,14 +121,8 @@ function wgwp_create_menu() {
     // подключаем CSS на странице плагина
     add_action('admin_print_styles-'. $add_game_page, 'writing_games_admin_css');
 
-    add_submenu_page(
-			  'wgwp-main-menu'   //or 'options.php'
-			, 'Произвольная страница подменю'
-			, 'Произвольная страница подменю'
-			, 'manage_options'
-			, 'my-custom-submenu-page'
-			, 'wgwp_createmainmenu'
-	);
+    $edit_game_page = add_submenu_page( NULL, 'Редактировать игру', 'Редактировать игру', 'manage_options', 'writing-games-edit-game', 'writing_games_edit_game');
+    add_action('admin_print_styles-'. $edit_game_page, 'writing_games_admin_css');
 
     add_action( 'wp_enqueue_scripts', 'my_scripts_method', 11 );
 }
@@ -145,16 +139,9 @@ function writing_games_admin_css() {
     wp_enqueue_style( 'writing-game-plugin-include-fontawesome', 'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' );
 }
 
-// Основная страница плагина
-function wgwp_createmainmenu() {
-    echo "<div>основная страница</div>";
-    wg_debuger( $_POST );
-}
-
 
 // Отображаем список игр
 function writing_games_list_games() {
-
 
     // срабатывает при удалении игры
     if ( !empty( $_POST['delete_game'] ) ) {
@@ -165,10 +152,6 @@ function writing_games_list_games() {
         }
     }
 
-    if ( !empty( $_POST['edit_game']) ) {
-        
-    }
-
     // получаем список всех игр
     $list_games = get_list_games(); // array
 ?>
@@ -176,7 +159,12 @@ function writing_games_list_games() {
 <h1>Список игр</h1>
 <h2>Количество: <?php echo count($list_games); ?></h2>
     <table class="list-games" cellspacing='0' cellpadding='20'>
-
+    <tr>
+        <th>Name</th>
+        <th>Words</th>
+        <th>Time</th>
+        <th>Enabled</th>
+    </tr>
     <?php
         foreach ($list_games as $key => $game) :
             $game_id       =  $game['id'];
@@ -188,14 +176,18 @@ function writing_games_list_games() {
         <tr>
             <td><?php echo $game_name; ?></td>
             <td><?php echo $game_words; ?></td>
-            <td><?php echo $game_time; ?></td>
-            <td><?php echo $game_enabled; ?></td>
+            <td align="center"><?php echo $game_time; ?></td>
+            <td align="center"><?php echo ($game_enabled == 1) ? 'yes' : 'no'; ?></td>
             <td align="right" width="100px">
                 <form action="" method="POST">
-                    <button type="submit" name="edit_game" value="<?php echo $game_id; ?>" title="Редактировать">
-                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
-                    </button>
-                    <span>&nbsp;&nbsp;&nbsp;</span>
+                    <a style="text-decoration: none;" href="../wp-admin/admin.php?page=writing-games-edit-game&id=<?php echo $game_id; ?>">
+                        <button type="button" name="edit_game" value="" title="Редактировать">
+                            <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                        </button>
+                    </a>
+
+                    &nbsp;&nbsp;&nbsp;
+
                     <button type="submit" name="delete_game" value="<?php echo $game_id; ?>" title="Удалить">
                         <i class="fa fa-trash-o" aria-hidden="true"></i>
                     </button>
@@ -213,9 +205,9 @@ function writing_games_add_game() {
 
     if ( !empty($_POST['add_game']) ) {
         if ( add_game() ) {
-            echo "<h3 class='ok'>Игра добавлена</h3><hr>";
+            echo "<h1 class='ok'>Игра добавлена</h1><hr>";
         } else {
-            echo "<h3 class='error'>Ошибка при добавлении игры</h3>";
+            echo "<h1 class='error'>Ошибка при добавлении игры</h1>";
         }
     }
 ?>
@@ -227,14 +219,73 @@ function writing_games_add_game() {
         <p><textarea name="game_words" rows="8" cols="40" placeholder="текст" required></textarea></p>
         <p>
             <input type="number" name="game_time" value="" placeholder="время" required>
-            <span class=""><label><input type="checkbox" checked name="game_enabled">Вкл. ?</label></span>
+            <span class=""><label><input type="checkbox" checked name="game_enabled">Enabled</label></span>
         </p>
         <input type="submit" name="add_game" value="Добавить">
     </form>
 </div>
 
 <?
-} // end of wgwp_add_game()
+} // end of writing_games_add_game()
+
+
+// Редактируем игру
+function writing_games_edit_game() {
+
+    if ( !empty( $_POST['update_game']) ) {
+        $update = update_game();
+        if ( $update > 0 ) {
+            echo "<h1 class='ok'>Обновлено успешно</h1><hr>";
+        } elseif ( $update === 0) {
+            echo "<h1 class='ok'>Запрос был выполнен корректно, но ни одна строка не была обработана</h1><hr>";
+        } elseif ( $update === false ) {
+            echo "<h1 class='error'>Запрос провалился или ошибка запроса.</h1><hr>";
+        }
+    }
+
+
+    global $wpdb;
+    $table_writing_games = TABLEWRITINGGAMES;
+    $id = $_GET['id'];
+    $data = $wpdb->get_row( "SELECT * FROM $table_writing_games WHERE `id` = $id", ARRAY_A );
+
+    $game_name = $data['name'];
+    $game_words = $data['words'];
+    $game_time = $data['time'];
+    $game_enabled = $data['enabled'];
+
+?>
+<h1>Обновить игру "<?php echo $game_name; ?>"</h1>
+<form action="" method="POST">
+    <input type="hidden" name="game_id" value="<?php echo $id; ?>">
+    <p><input type="text" name="game_name" value="<?php echo $game_name; ?>" placeholder="название" required></p>
+    <p><textarea name="game_words" rows="8" cols="40" placeholder="текст" required><?php echo $game_words; ?></textarea></p>
+    <p>
+        <input type="number" name="game_time" value="<?php echo $game_time; ?>" placeholder="время" required>
+
+        <?php if ( $game_enabled == 1 ) { ?>
+        <span>
+            <label>
+                <input type="checkbox" checked name="game_enabled" value="<?php echo $game_enabled; ?>">
+                Enabled
+            </label>
+        </span>
+        <? } else { ?>
+        <span>
+            <label>
+                <input type="checkbox" name="game_enabled" value="<?php echo $game_enabled; ?>">
+                Enabled
+            </label>
+        </span>
+        <?php } ?>
+    </p>
+    <input type="submit" name="update_game" value="Обновить">
+</form>
+
+<?php
+    // exit();
+} // end writing_games_edit_game()
+
 
 
 
@@ -275,6 +326,49 @@ function delete_game() {
 
     return $delete_game;
 }
+
+
+// Обновляем игру
+function update_game() {
+    global $wpdb;
+    $data = $_POST;
+    $game_id = $data['game_id'];
+    $game_name = $data['game_name'];
+    $game_words = $data['game_words'];
+    $game_time = $data['game_time'];
+    $game_enabled = ( $data['game_enabled'] == '' ) ? 0 : 1;
+    $update = $wpdb->update(
+        TABLEWRITINGGAMES,
+        [
+            'name' => $game_name,
+            'words' => $game_words,
+            'time' => $game_time,
+            'enabled' => $game_enabled,
+        ],
+
+        [ 'id' => $game_id ],
+
+        [ '%s', '%s', '%d', '%d' ],
+
+        [ '%d' ]
+    );
+    return $update;
+
+    /*
+    if ( $update > 0 ) {
+        $success = [ 'result' => 'success update game table' ];
+        return json_encode( $success );
+    } elseif ( $update === 0) {
+        $no_update = [ 'result' => 'no update game table' ];
+        return json_encode( $no_update );
+    } elseif ( $update === false ) {
+        $fail = [ 'failure' => 'error update game table' ];
+        return json_encode( $fail );
+    }
+    */
+
+}
+
 
 
 // ВСЯ информация из двух таблиц
