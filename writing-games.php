@@ -263,27 +263,21 @@ function writing_games_edit_game() {
     <p>
         <input type="number" name="game_time" value="<?php echo $game_time; ?>" placeholder="время" required>
 
-        <?php if ( $game_enabled == 1 ) { ?>
         <span>
             <label>
+                <?php if ( $game_enabled == 1 ) { ?>
                 <input type="checkbox" checked name="game_enabled" value="<?php echo $game_enabled; ?>">
-                Enabled
-            </label>
-        </span>
-        <? } else { ?>
-        <span>
-            <label>
+                <? } else { ?>
                 <input type="checkbox" name="game_enabled" value="<?php echo $game_enabled; ?>">
+                <?php } ?>
                 Enabled
             </label>
         </span>
-        <?php } ?>
     </p>
     <input type="submit" name="update_game" value="Обновить">
 </form>
 
 <?php
-    // exit();
 } // end writing_games_edit_game()
 
 
@@ -352,21 +346,8 @@ function update_game() {
 
         [ '%d' ]
     );
+
     return $update;
-
-    /*
-    if ( $update > 0 ) {
-        $success = [ 'result' => 'success update game table' ];
-        return json_encode( $success );
-    } elseif ( $update === 0) {
-        $no_update = [ 'result' => 'no update game table' ];
-        return json_encode( $no_update );
-    } elseif ( $update === false ) {
-        $fail = [ 'failure' => 'error update game table' ];
-        return json_encode( $fail );
-    }
-    */
-
 }
 
 
